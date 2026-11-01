@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Inteligente & Pedidos WhatsApp</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .hero-bg {
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.3s ease-in-out;
+        }
+        .product-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .product-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body id="appBody" class="bg-slate-950 font-sans text-slate-100 antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Top Header Bar with Live BCV Dollar Rate & Status -->
+    <header class="bg-slate-900/90 backdrop-blur-md text-white shadow-md sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-4xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <div id="headerLogoContainer" class="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center overflow-hidden shrink-0">
+                    <i id="headerDefaultIcon" class="fa-solid fa-burger text-emerald-400 text-sm"></i>
+                    <img id="headerCustomLogo" class="hidden w-full h-full object-cover" alt="Logo">
+                </div>
+                <div>
+                    <span id="appTitleDisplay" class="font-black text-sm md:text-base tracking-wide text-white block leading-none">PEDIDOS EXPRESS</span>
+                    <span class="text-[10px] text-slate-400">Delivery & Pickup</span>
+                </div>
+            </div>
+
+            <!-- Tasa de Cambio BCV Automática -->
+            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 shadow-inner">
+                <i class="fa-solid fa-coins text-amber-400 text-xs"></i>
+                <span class="text-xs text-slate-300 font-medium">Tasa BCV:</span>
+                <span class="text-xs text-amber-400 font-extrabold">Bs.</span>
+                <input type="number" id="exchangeRate" value="36.50" step="0.01" min="1" 
+                       class="w-16 bg-slate-900 text-amber-300 text-xs font-black px-1.5 py-0.5 rounded border border-slate-600 focus:outline-none focus:border-emerald-400 text-center"
+                       oninput="updateTotals()">
+                <button onclick="fetchBcvRate()" title="Actualizar Tasa BCV" class="text-slate-400 hover:text-emerald-400 transition-colors ml-0.5">
+                    <i id="syncIcon" class="fa-solid fa-rotate-right text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Botón Acceso Panel de Control / Configuración -->
+            <button onclick="openAdminModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold px-3 py-1.5 rounded-full border border-amber-500/30 flex items-center gap-1.5 transition-all shadow-sm">
+                <i class="fa-solid fa-lock text-xs"></i>
+                <span class="hidden sm:inline">Admin</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Modal de Autenticación Admin -->
+    <div id="adminAuthModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+            <button onclick="closeAdminAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center mb-5">
+                <div class="w-12 h-12 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Área de Administración</h3>
+                <p class="text-xs text-slate-400">Ingresa la clave para gestionar productos y precios</p>
+            </div>
+            <form onsubmit="verifyAdminPassword(event)" class="space-y-4">
+                <div>
+                    <input type="password" id="adminPasswordInput" required placeholder="Contraseña (Por defecto: 1234)" 
+                           class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest">
+                </div>
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm transition-all shadow-lg shadow-amber-500/20">
+                    Ingresar al Panel
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast Message -->
+    <div id="toast" class="fixed top-14 right-4 z-50 transform translate-x-full transition-transform duration-300 bg-slate-800 border border-emerald-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-semibold">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">Mensaje de notificación</span>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow flex items-center justify-center p-3 md:p-6">
+        <div class="w-full max-w-3xl">
+
+            <!-- STEP 1: Datos del Cliente y Selección de Delivery -->
+            <section id="step1" class="hero-bg rounded-2xl shadow-2xl overflow-hidden border border-slate-800 p-5 md:p-8 text-white transition-all duration-300">
+                <div class="max-w-md mx-auto text-center">
+                    
+                    <!-- Logo Destacado -->
+                    <div id="step1LogoContainer" class="mb-4 inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-400 backdrop-blur-md shadow-xl overflow-hidden">
+                        <i id="step1DefaultIcon" class="fa-solid fa-utensils text-3xl text-emerald-400"></i>
+                        <img id="step1CustomLogo" class="hidden w-full h-full object-cover" alt="Logo Negocio">
+                    </div>
+                    
+                    <h1 class="text-2xl md:text-3xl font-black tracking-tight mb-1 text-white">¡Haz tu Pedido Directo!</h1>
+                    <p class="text-xs md:text-sm text-slate-300 mb-6">Completa tus datos personales y método de entrega para abrir el menú.</p>
+
+                    <!-- Formulario de Datos del Cliente -->
+                    <form id="clientForm" onsubmit="goToCatalog(event)" class="space-y-3.5 text-left">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                <i class="fa-solid fa-user text-emerald-400 mr-1.5"></i>Nombre y Apellido *
+                            </label>
+                            <input type="text" id="clientName" required placeholder="Ej. María Pérez" 
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm backdrop-blur-sm">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                    <i class="fa-solid fa-id-card text-emerald-400 mr-1.5"></i>Cédula de Identidad *
+                                </label>
+                                <input type="text" id="clientId" required placeholder="Ej. V-18234567" 
+                                       class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm backdrop-blur-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                    <i class="fa-solid fa-phone text-emerald-400 mr-1.5"></i>Teléfono de Contacto *
+                                </label>
+                                <input type="tel" id="clientPhone" required placeholder="Ej. 04121234567" 
+                                       class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm backdrop-blur-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                <i class="fa-solid fa-location-dot text-emerald-400 mr-1.5"></i>Dirección Exacta de Entrega *
+                            </label>
+                            <textarea id="clientAddress" required rows="2" placeholder="Sector, calle, número de casa/apto y punto de referencia..." 
+                                      class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm backdrop-blur-sm resize-none"></textarea>
+                        </div>
+
+                        <!-- Opciones de Delivery / Precio Personalizable -->
+                        <div class="pt-2 border-t border-slate-800">
+                            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                                <i class="fa-solid fa-motorcycle text-amber-400 mr-1.5"></i>Zona & Precio de Delivery *
+                            </label>
+                            
+                            <select id="deliveryZone" onchange="handleDeliveryZoneChange()" 
+                                    class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm mb-2">
+                                <!-- Opciones cargadas dinámicamente -->
+                            </select>
+
+                            <!-- Campo Personalizado de Delivery (Oculto/Visible dinámicamente) -->
+                            <div id="customDeliveryContainer" class="hidden flex items-center gap-2 bg-slate-900/90 p-2.5 rounded-xl border border-amber-500/50">
+                                <span class="text-xs text-amber-300 font-semibold shrink-0">Costo de Delivery ($):</span>
+                                <input type="number" id="customDeliveryPrice" value="2.50" step="0.5" min="0" 
+                                       class="w-full bg-slate-800 text-amber-300 text-sm font-bold px-3 py-1 rounded border border-slate-600 focus:outline-none focus:border-amber-400"
+                                       oninput="updateTotals()">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full mt-4 py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-extrabold text-sm tracking-wide shadow-lg shadow-emerald-900/40 hover:shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 group">
+                            <span>Siguiente / Ver Catálogo</span>
+                            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- STEP 2: Catálogo interactivo de productos -->
+            <section id="step2" class="hidden bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden">
+                
+                <!-- Encabezado del Catálogo -->
+                <div class="bg-slate-950 text-white p-4 md:p-5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-lg md:text-xl font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-utensils text-amber-400"></i> Catálogo de Productos
+                        </h2>
+                        <p class="text-xs text-slate-400">Selecciona las cantidades para tu orden</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearCartAndForm(true)" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 py-1.5 px-3 rounded-lg border border-rose-500/30 transition-colors flex items-center gap-1 font-semibold" title="Vaciar Carrito y Limpiar Datos">
+                            <i class="fa-solid fa-trash-can"></i> Limpiar Todo
+                        </button>
+                        <button onclick="goToForm()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 px-3 rounded-lg border border-slate-700 transition-colors flex items-center gap-1 font-semibold">
+                            <i class="fa-solid fa-user-pen"></i> Mis Datos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros de Categoría -->
+                <div class="p-4 border-b border-slate-800/80 bg-slate-900/50 flex gap-2 overflow-x-auto pb-3">
+                    <button onclick="filterCategory('all')" id="cat-all" class="cat-btn bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full border border-emerald-400 shrink-0 transition-all">
+                        Todos
+                    </button>
+                    <button onclick="filterCategory('tequenos')" id="cat-tequenos" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-700 shrink-0 transition-all">
+                        🧀 Tequeños
+                    </button>
+                    <button onclick="filterCategory('pasapalos')" id="cat-pasapalos" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-700 shrink-0 transition-all">
+                        🥟 Pasapalos & Minis
+                    </button>
+                    <button onclick="filterCategory('bebidas')" id="cat-bebidas" class="cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-700 shrink-0 transition-all">
+                        🥤 Bebidas & Combos
+                    </button>
+                </div>
+
+                <div class="p-4 md:p-6">
+                    <!-- Grid de Tarjetas de Productos -->
+                    <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
+                        <!-- Generado Dinámicamente -->
+                    </div>
+
+                    <!-- Panel de Resumen de Cuenta con Delivery incluido -->
+                    <div class="bg-slate-950 text-white rounded-xl p-4 md:p-5 shadow-inner border border-slate-800">
+                        <h3 class="text-xs md:text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span><i class="fa-solid fa-receipt text-emerald-400 mr-2"></i>Resumen de la Orden</span>
+                            <span id="itemCount" class="text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-500/30">0 ítems</span>
+                        </h3>
+
+                        <!-- Lista resumida de ítems -->
+                        <div id="selectedItemsList" class="space-y-1.5 mb-3 text-xs md:text-sm max-h-36 overflow-y-auto pr-1">
+                            <p class="text-slate-500 italic text-center py-2">No has seleccionado productos aún.</p>
+                        </div>
+
+                        <!-- Desglose de Delivery y Totales -->
+                        <div class="border-t border-slate-800 pt-3 space-y-1.5 text-xs md:text-sm">
+                            <div class="flex justify-between items-center text-slate-400">
+                                <span>Subtotal Productos:</span>
+                                <span id="subtotalUSD" class="font-bold text-slate-200">$0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-400">
+                                <span>Costo Delivery / Envío:</span>
+                                <span id="deliveryCostDisplay" class="font-bold text-amber-400">$0.00</span>
+                            </div>
+                            <div class="border-t border-slate-800/80 pt-2 flex justify-between items-center text-slate-100 font-bold">
+                                <span>Gran Total ($):</span>
+                                <span id="totalUSD" class="font-black text-emerald-400 text-base md:text-lg">$0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Gran Total (Bs.):</span>
+                                <span id="totalBS" class="font-black text-amber-400 text-base md:text-lg">Bs. 0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Botón Enviar Pedido a WhatsApp -->
+                        <button onclick="sendWhatsAppOrder()" class="w-full mt-4 py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm tracking-wide shadow-lg shadow-emerald-950/60 transition-all flex items-center justify-center gap-2 group">
+                            <i class="fa-brands fa-whatsapp text-xl"></i>
+                            <span>Enviar Pedido por WhatsApp</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STEP 3: Panel de Administración & Configuración (Pestaña Protegida) -->
+            <section id="stepAdmin" class="hidden bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden">
+                <div class="bg-slate-950 text-white p-4 md:p-5 flex items-center justify-between border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                            <i class="fa-solid fa-sliders text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base md:text-lg font-bold text-white leading-tight">Panel de Administración</h2>
+                            <p class="text-xs text-slate-400">Gestión de productos, fotos, marca y delivery</p>
+                        </div>
+                    </div>
+                    <button onclick="closeAdminPanel()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 px-3 rounded-lg border border-slate-700 transition-colors font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-left"></i> Volver al Menú
+                    </button>
+                </div>
+
+                <!-- Sub-Navegación de Pestañas dentro del Admin -->
+                <div class="bg-slate-950/80 px-4 pt-2 border-b border-slate-800 flex gap-2 overflow-x-auto text-xs font-bold">
+                    <button onclick="switchAdminTab('prods')" id="adminTabBtn-prods" class="admin-tab-btn text-amber-400 border-b-2 border-amber-400 pb-2 px-3 flex items-center gap-1.5">
+                        <i class="fa-solid fa-boxes-stacked"></i> Productos
+                    </button>
+                    <button onclick="switchAdminTab('brand')" id="adminTabBtn-brand" class="admin-tab-btn text-slate-400 hover:text-slate-200 pb-2 px-3 flex items-center gap-1.5">
+                        <i class="fa-solid fa-palette"></i> Logo & Fondo
+                    </button>
+                    <button onclick="switchAdminTab('delivery')" id="adminTabBtn-delivery" class="admin-tab-btn text-slate-400 hover:text-slate-200 pb-2 px-3 flex items-center gap-1.5">
+                        <i class="fa-solid fa-motorcycle"></i> Delivery & General
+                    </button>
+                </div>
+
+                <div class="p-4 md:p-6">
+                    
+                    <!-- PESTAÑA 1: PRODUCTOS -->
+                    <div id="adminTabContent-prods" class="space-y-6">
+                        <!-- Formulario de Agregar / Editar Producto -->
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                            <h3 id="productFormTitle" class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-plus"></i> Agregar Nuevo Producto
+                            </h3>
+                            <form id="productCrudForm" onsubmit="handleProductFormSubmit(event)" class="space-y-3">
+                                <input type="hidden" id="editProductId" value="">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] text-slate-400 mb-1">Nombre del Producto *</label>
+                                        <input type="text" id="prodName" required placeholder="Ej. Combo Tequeños" 
+                                               class="w-full bg-slate-900 border border-slate-700 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-emerald-400">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] text-slate-400 mb-1">Categoría *</label>
+                                        <select id="prodCategory" required class="w-full bg-slate-900 border border-slate-700 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-emerald-400">
+                                            <option value="tequenos">Tequeños</option>
+                                            <option value="pasapalos">Pasapalos & Minis</option>
+                                            <option value="bebidas">Bebidas & Combos</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] text-slate-400 mb-1">Precio en USD ($) *</label>
+                                        <input type="number" id="prodPrice" required step="0.01" min="0" placeholder="Ej. 8.50" 
+                                               class="w-full bg-slate-900 border border-slate-700 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-emerald-400">
+                                    </div>
+                                    
+                                    <!-- Carga de Imagen (Archivo Local o URL) -->
+                                    <div>
+                                        <label class="block text-[11px] text-slate-400 mb-1">Imagen del Producto (Subir desde PC/Celular o URL)</label>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center gap-2">
+                                                <input type="file" id="prodImageFile" accept="image/*" onchange="handleProductImageFile(event)"
+                                                       class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer">
+                                            </div>
+                                            <input type="url" id="prodImage" placeholder="O pega una URL: https://..." 
+                                                   class="w-full bg-slate-900 border border-slate-700 text-white text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-emerald-400">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Vista previa de la imagen cargada -->
+                                <div id="prodImagePreviewContainer" class="hidden flex items-center gap-3 bg-slate-900 p-2 rounded-lg border border-slate-800">
+                                    <img id="prodImagePreview" src="" class="w-12 h-12 object-cover rounded border border-slate-700">
+                                    <span class="text-[11px] text-emerald-400 font-semibold"><i class="fa-solid fa-check mr-1"></i>Imagen lista para guardar</span>
+                                    <button type="button" onclick="clearProdImagePreview()" class="ml-auto text-xs text-rose-400 hover:text-rose-300">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <div class="flex gap-2 pt-1">
+                                    <button type="submit" id="saveProductBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-lg shadow-md transition-all">
+                                        Guardar Producto
+                                    </button>
+                                    <button type="button" onclick="resetProductForm()" id="cancelEditBtn" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs px-4 py-2.5 rounded-lg border border-slate-700">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Tabla de Productos Existentes -->
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
+                                <i class="fa-solid fa-boxes-stacked text-amber-400 mr-1"></i> Catálogo Actual (<span id="adminProdCount">0</span>)
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs text-slate-300">
+                                    <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+                                        <tr>
+                                            <th class="p-2">Producto</th>
+                                            <th class="p-2">Categoría</th>
+                                            <th class="p-2">Precio ($)</th>
+                                            <th class="p-2 text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminProductsTable" class="divide-y divide-slate-800">
+                                        <!-- Filas de productos dinámicas -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PESTAÑA 2: LOGO Y FONDO (PERSONALIZACIÓN) -->
+                    <div id="adminTabContent-brand" class="hidden space-y-6">
+                        
+                        <!-- Subir Logo de la Marca -->
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                            <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <i class="fa-solid fa-image"></i> Logo del Negocio
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                <div>
+                                    <p class="text-xs text-slate-300 mb-2">Sube una imagen cuadrada para la marca (JPG, PNG):</p>
+                                    <input type="file" id="logoFileInput" accept="image/*" onchange="uploadCustomLogo(event)" 
+                                           class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-500/20 file:text-amber-400 hover:file:bg-amber-500/30 cursor-pointer">
+                                </div>
+                                <div class="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
+                                    <div class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                                        <img id="logoAdminPreview" class="hidden w-full h-full object-cover">
+                                        <i id="logoAdminDefaultIcon" class="fa-solid fa-utensils text-slate-500"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block">Vista Previa del Logo</span>
+                                        <button onclick="resetLogoToDefault()" class="text-[11px] text-rose-400 hover:underline">Restaurar Logo Predeterminado</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subir Imagen de Fondo (Background) -->
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <i class="fa-solid fa-mountain-sun"></i> Imagen de Fondo de Pantalla
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-xs text-slate-300 mb-2">Selecciona una foto desde tu galería o PC para el fondo:</p>
+                                    <input type="file" id="bgFileInput" accept="image/*" onchange="uploadCustomBg(event)" 
+                                           class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer">
+                                </div>
+                                <div class="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
+                                    <span class="text-xs text-slate-300">¿Deseas volver al fondo original del sistema?</span>
+                                    <button onclick="resetBgToDefault()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 font-semibold">
+                                        Restaurar Fondo Predeterminado
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PESTAÑA 3: DELIVERY & CONFIGURACIÓN GENERAL -->
+                    <div id="adminTabContent-delivery" class="hidden space-y-6">
+                        <!-- Configuración General (Teléfono & Clave) -->
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                    <i class="fa-brands fa-whatsapp text-emerald-400 mr-1"></i>WhatsApp Receptivo
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="adminVendorPhone" placeholder="Ej. 584141234567" 
+                                           class="w-full bg-slate-900 border border-slate-700 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-emerald-400">
+                                    <button onclick="saveAdminVendorPhone()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-2 rounded-lg shrink-0">
+                                        Guardar
+                                    </button>
+                                </div>
+                                <span class="text-[10px] text-slate-500">Incluir código de país sin signo + (ej. 58 para Vzla)</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                                    <i class="fa-solid fa-key text-amber-400 mr-1"></i>Cambiar Contraseña Admin
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="password" id="adminNewPass" placeholder="Nueva Clave Admin" 
+                                           class="w-full bg-slate-900 border border-slate-700 text-white text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-amber-400">
+                                    <button onclick="saveNewAdminPassword()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-3 py-2 rounded-lg shrink-0">
+                                        Cambiar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración de Zonas de Delivery -->
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                            <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                                <span><i class="fa-solid fa-motorcycle mr-1"></i> Configurar Tarifas de Delivery</span>
+                                <button onclick="addDeliveryZoneRow()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded border border-slate-700">
+                                    <i class="fa-solid fa-plus text-emerald-400"></i> Nueva Zona
+                                </button>
+                            </h3>
+                            <div id="adminDeliveryZonesList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                <!-- Filas dinámicas -->
+                            </div>
+                            <button onclick="saveAdminDeliveryZones()" class="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs py-2 rounded-lg border border-slate-700">
+                                <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Zonas de Delivery
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-600 text-center text-xs py-3 border-t border-slate-900">
+        <p>© 2026 Menú Inteligente — Automatización de Pedidos WhatsApp</p>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Configuración Predeterminada de Productos
+        const defaultProducts = [
+            {
+                id: 'teq_colegiales',
+                category: 'tequenos',
+                name: 'Tequeños Colegiales (Bandeja 25u)',
+                price: 8.00,
+                image: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            },
+            {
+                id: 'teq_jumbo',
+                category: 'tequenos',
+                name: 'Tequeños Jumbo Queso (12u)',
+                price: 10.00,
+                image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            },
+            {
+                id: 'pastelitos',
+                category: 'pasapalos',
+                name: 'Mini Pastelitos Surtidos (15u)',
+                price: 9.50,
+                image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            },
+            {
+                id: 'bolitas_carne',
+                category: 'pasapalos',
+                name: 'Bolitas de Carne Sazonadas (20u)',
+                price: 11.00,
+                image: 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            },
+            {
+                id: 'serpentinas',
+                category: 'pasapalos',
+                name: 'Serpentinas Jamón y Queso (12u)',
+                price: 7.50,
+                image: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            },
+            {
+                id: 'combo_fiesta',
+                category: 'bebidas',
+                name: 'Combo Mega Fiesta + Refresco 2L',
+                price: 22.00,
+                image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            },
+            {
+                id: 'bebidas',
+                category: 'bebidas',
+                name: 'Refresco Familiar 2 Litros',
+                price: 3.00,
+                image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=400&q=80',
+                qty: 0
+            }
+        ];
+
+        // Zonas de delivery predeterminadas
+        const defaultDeliveryZones = [
+            { label: 'Retiro en Tienda / Pickup ($0.00)', value: '0' },
+            { label: 'Zona Central / Casco Urbano ($1.00)', value: '1' },
+            { label: 'Zona Intermedia / Las Quinteras ($2.00)', value: '2' },
+            { label: 'Zona Lejana / Periferia ($3.00)', value: '3' },
+            { label: 'Precio Personalizado de Delivery', value: 'custom' }
+        ];
+
+        let products = [];
+        let deliveryZones = [];
+        let adminPassword = "1234";
+        let vendorPhone = "584141234567";
+        let activeCategory = 'all';
+        let customLogoData = "";
+        let customBgData = "";
+        let pendingProductBase64 = "";
+
+        // Cargar datos persistentes de localStorage
+        function loadStoredSettings() {
+            const storedProds = localStorage.getItem('app_products');
+            products = storedProds ? JSON.parse(storedProds) : defaultProducts;
+            products.forEach(p => p.qty = 0);
+
+            const storedZones = localStorage.getItem('app_delivery_zones');
+            deliveryZones = storedZones ? JSON.parse(storedZones) : defaultDeliveryZones;
+
+            const storedPass = localStorage.getItem('app_admin_pass');
+            if (storedPass) adminPassword = storedPass;
+
+            const storedPhone = localStorage.getItem('app_vendor_phone');
+            if (storedPhone) vendorPhone = storedPhone;
+
+            customLogoData = localStorage.getItem('app_custom_logo') || "";
+            customBgData = localStorage.getItem('app_custom_bg') || "";
+
+            document.getElementById('adminVendorPhone').value = vendorPhone;
+            populateDeliverySelect();
+            applyCustomBranding();
+        }
+
+        // Aplicar Logo y Fondo guardados en la interfaz
+        function applyCustomBranding() {
+            // Aplicar Logo
+            const headerCustomLogo = document.getElementById('headerCustomLogo');
+            const headerDefaultIcon = document.getElementById('headerDefaultIcon');
+            const step1CustomLogo = document.getElementById('step1CustomLogo');
+            const step1DefaultIcon = document.getElementById('step1DefaultIcon');
+            const logoAdminPreview = document.getElementById('logoAdminPreview');
+            const logoAdminDefaultIcon = document.getElementById('logoAdminDefaultIcon');
+
+            if (customLogoData) {
+                headerCustomLogo.src = customLogoData;
+                headerCustomLogo.classList.remove('hidden');
+                headerDefaultIcon.classList.add('hidden');
+
+                step1CustomLogo.src = customLogoData;
+                step1CustomLogo.classList.remove('hidden');
+                step1DefaultIcon.classList.add('hidden');
+
+                if (logoAdminPreview) {
+                    logoAdminPreview.src = customLogoData;
+                    logoAdminPreview.classList.remove('hidden');
+                    logoAdminDefaultIcon.classList.add('hidden');
+                }
+            } else {
+                headerCustomLogo.classList.add('hidden');
+                headerDefaultIcon.classList.remove('hidden');
+
+                step1CustomLogo.classList.add('hidden');
+                step1DefaultIcon.classList.remove('hidden');
+
+                if (logoAdminPreview) {
+                    logoAdminPreview.classList.add('hidden');
+                    logoAdminDefaultIcon.classList.remove('hidden');
+                }
+            }
+
+            // Aplicar Fondo
+            const step1Section = document.getElementById('step1');
+            if (customBgData) {
+                step1Section.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.92)), url('${customBgData}')`;
+            } else {
+                step1Section.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.92)), url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80')`;
+            }
+        }
+
+        // Subir Logo Personalizado desde Dispositivo (Base64)
+        function uploadCustomLogo(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                customLogoData = event.target.result;
+                localStorage.setItem('app_custom_logo', customLogoData);
+                applyCustomBranding();
+                showToast('Logo de la marca actualizado.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Restaurar Logo Predeterminado
+        function resetLogoToDefault() {
+            customLogoData = "";
+            localStorage.removeItem('app_custom_logo');
+            applyCustomBranding();
+            showToast('Logo restablecido al predeterminado.');
+        }
+
+        // Subir Fondo Personalizado desde Dispositivo (Base64)
+        function uploadCustomBg(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                customBgData = event.target.result;
+                localStorage.setItem('app_custom_bg', customBgData);
+                applyCustomBranding();
+                showToast('Fondo de pantalla actualizado.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Restaurar Fondo Predeterminado
+        function resetBgToDefault() {
+            customBgData = "";
+            localStorage.removeItem('app_custom_bg');
+            applyCustomBranding();
+            showToast('Fondo restablecido al predeterminado.');
+        }
+
+        // Subir Imagen de Producto en el Formulario (FileReader a Base64)
+        function handleProductImageFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                pendingProductBase64 = event.target.result;
+                document.getElementById('prodImagePreview').src = pendingProductBase64;
+                document.getElementById('prodImagePreviewContainer').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearProdImagePreview() {
+            pendingProductBase64 = "";
+            document.getElementById('prodImageFile').value = "";
+            document.getElementById('prodImagePreviewContainer').classList.add('hidden');
+        }
+
+        // Cambiar pestañas dentro del panel Admin
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+                btn.className = "admin-tab-btn text-slate-400 hover:text-slate-200 pb-2 px-3 flex items-center gap-1.5";
+            });
+            document.getElementById(`adminTabBtn-${tab}`).className = "admin-tab-btn text-amber-400 border-b-2 border-amber-400 pb-2 px-3 flex items-center gap-1.5";
+
+            document.getElementById('adminTabContent-prods').classList.add('hidden');
+            document.getElementById('adminTabContent-brand').classList.add('hidden');
+            document.getElementById('adminTabContent-delivery').classList.add('hidden');
+
+            document.getElementById(`adminTabContent-${tab}`).classList.remove('hidden');
+        }
+
+        // Poblar select de zonas de delivery
+        function populateDeliverySelect() {
+            const select = document.getElementById('deliveryZone');
+            select.innerHTML = '';
+            deliveryZones.forEach(z => {
+                const opt = document.createElement('option');
+                opt.value = z.value;
+                opt.textContent = z.label;
+                select.appendChild(opt);
+            });
+            handleDeliveryZoneChange();
+        }
+
+        // --- SISTEMA DE AUTENTICACIÓN ADMIN ---
+        function openAdminModal() {
+            document.getElementById('adminAuthModal').classList.remove('hidden');
+            document.getElementById('adminPasswordInput').value = '';
+            document.getElementById('adminPasswordInput').focus();
+        }
+
+        function closeAdminAuthModal() {
+            document.getElementById('adminAuthModal').classList.add('hidden');
+        }
+
+        function verifyAdminPassword(e) {
+            e.preventDefault();
+            const inputPass = document.getElementById('adminPasswordInput').value;
+            if (inputPass === adminPassword) {
+                closeAdminAuthModal();
+                showAdminPanel();
+                showToast('Acceso concedido al panel de administración.');
+            } else {
+                alert('Contraseña incorrecta. Acceso denegado.');
+            }
+        }
+
+        function showAdminPanel() {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('stepAdmin').classList.remove('hidden');
+            renderAdminPanel();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('stepAdmin').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            renderCatalog();
+            updateTotals();
+        }
+
+        // --- GESTIÓN ADMIN (CRUD PRODUCTOS) ---
+        function renderAdminPanel() {
+            document.getElementById('adminProdCount').innerText = products.length;
+            const tableBody = document.getElementById('adminProductsTable');
+            tableBody.innerHTML = '';
+
+            products.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-900/50';
+                tr.innerHTML = `
+                    <td class="p-2 font-semibold text-white flex items-center gap-2">
+                        <img src="${p.image}" class="w-7 h-7 rounded object-cover border border-slate-700 shrink-0" 
+                             onerror="this.src='https://placehold.co/50x50/1e293b/ffffff?text=P'">
+                        <span class="truncate max-w-[120px] sm:max-w-[180px]">${p.name}</span>
+                    </td>
+                    <td class="p-2 text-slate-400 capitalize">${p.category}</td>
+                    <td class="p-2 font-bold text-emerald-400">$${p.price.toFixed(2)}</td>
+                    <td class="p-2 text-right space-x-1">
+                        <button onclick="editProduct('${p.id}')" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 p-1.5 rounded transition-colors" title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="deleteProduct('${p.id}')" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 p-1.5 rounded transition-colors" title="Eliminar">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            renderAdminDeliveryZones();
+        }
+
+        function handleProductFormSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editProductId').value;
+            const name = document.getElementById('prodName').value.trim();
+            const category = document.getElementById('prodCategory').value;
+            const price = parseFloat(document.getElementById('prodPrice').value);
+            
+            // Prioridad a la imagen subida localmente, luego URL, luego placeholder
+            let image = pendingProductBase64 || document.getElementById('prodImage').value.trim() || 'https://placehold.co/400x400/1e293b/ffffff?text=Producto';
+
+            if (editId) {
+                // Editar existente
+                const p = products.find(prod => prod.id === editId);
+                if (p) {
+                    p.name = name;
+                    p.category = category;
+                    p.price = price;
+                    p.image = image;
+                    showToast('Producto actualizado correctamente.');
+                }
+            } else {
+                // Crear nuevo
+                const newProd = {
+                    id: 'prod_' + Date.now(),
+                    category,
+                    name,
+                    price,
+                    image,
+                    qty: 0
+                };
+                products.push(newProd);
+                showToast('Nuevo producto agregado.');
+            }
+
+            saveProductsToStorage();
+            resetProductForm();
+            renderAdminPanel();
+        }
+
+        function editProduct(id) {
+            const p = products.find(prod => prod.id === id);
+            if (!p) return;
+
+            document.getElementById('editProductId').value = p.id;
+            document.getElementById('prodName').value = p.name;
+            document.getElementById('prodCategory').value = p.category;
+            document.getElementById('prodPrice').value = p.price;
+            document.getElementById('prodImage').value = p.image.startsWith('data:') ? '' : p.image;
+
+            if (p.image) {
+                pendingProductBase64 = p.image;
+                document.getElementById('prodImagePreview').src = p.image;
+                document.getElementById('prodImagePreviewContainer').classList.remove('hidden');
+            }
+
+            document.getElementById('productFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Producto';
+            document.getElementById('saveProductBtn').innerText = 'Guardar Cambios';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+        }
+
+        function resetProductForm() {
+            document.getElementById('editProductId').value = '';
+            document.getElementById('productCrudForm').reset();
+            clearProdImagePreview();
+            document.getElementById('productFormTitle').innerHTML = '<i class="fa-solid fa-circle-plus"></i> Agregar Nuevo Producto';
+            document.getElementById('saveProductBtn').innerText = 'Guardar Producto';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        function deleteProduct(id) {
+            if (confirm('¿Eliminar este producto del catálogo?')) {
+                products = products.filter(p => p.id !== id);
+                saveProductsToStorage();
+                renderAdminPanel();
+                showToast('Producto eliminado.');
+            }
+        }
+
+        function saveProductsToStorage() {
+            localStorage.setItem('app_products', JSON.stringify(products));
+        }
+
+        // --- GESTIÓN ADMIN (ZONAS DELIVERY) ---
+        function renderAdminDeliveryZones() {
+            const list = document.getElementById('adminDeliveryZonesList');
+            list.innerHTML = '';
+
+            deliveryZones.forEach((z, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex gap-2 items-center';
+                row.innerHTML = `
+                    <input type="text" value="${z.label}" id="zoneLabel_${index}" placeholder="Etiqueta" 
+                           class="flex-1 bg-slate-900 border border-slate-700 text-white text-xs px-2 py-1.5 rounded focus:outline-none focus:border-amber-400">
+                    <input type="text" value="${z.value}" id="zoneVal_${index}" placeholder="Valor / $" 
+                           class="w-20 bg-slate-900 border border-slate-700 text-white text-xs px-2 py-1.5 rounded text-center focus:outline-none focus:border-amber-400">
+                    ${z.value !== 'custom' ? `
+                        <button onclick="removeDeliveryZoneRow(${index})" class="text-rose-400 hover:text-rose-300 px-1 text-xs">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    ` : '<span class="w-4"></span>'}
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function addDeliveryZoneRow() {
+            deliveryZones.splice(deliveryZones.length - 1, 0, {
+                label: 'Nueva Zona ($2.50)',
+                value: '2.5'
+            });
+            renderAdminDeliveryZones();
+        }
+
+        function removeDeliveryZoneRow(index) {
+            deliveryZones.splice(index, 1);
+            renderAdminDeliveryZones();
+        }
+
+        function saveAdminDeliveryZones() {
+            const updated = [];
+            deliveryZones.forEach((z, i) => {
+                const labelInput = document.getElementById(`zoneLabel_${i}`);
+                const valInput = document.getElementById(`zoneVal_${i}`);
+                if (labelInput && valInput) {
+                    updated.push({
+                        label: labelInput.value.trim(),
+                        value: valInput.value.trim()
+                    });
+                }
+            });
+
+            deliveryZones = updated;
+            localStorage.setItem('app_delivery_zones', JSON.stringify(deliveryZones));
+            populateDeliverySelect();
+            showToast('Zonas de delivery guardadas.');
+        }
+
+        // Guardar teléfono de WhatsApp
+        function saveAdminVendorPhone() {
+            const phone = document.getElementById('adminVendorPhone').value.trim().replace(/\+/g, '');
+            if (!phone) {
+                alert('Ingresa un número de teléfono válido.');
+                return;
+            }
+            vendorPhone = phone;
+            localStorage.setItem('app_vendor_phone', vendorPhone);
+            showToast('Teléfono receptor guardado.');
+        }
+
+        // Guardar nueva clave
+        function saveNewAdminPassword() {
+            const newPass = document.getElementById('adminNewPass').value.trim();
+            if (!newPass) {
+                alert('La clave no puede estar vacía.');
+                return;
+            }
+            adminPassword = newPass;
+            localStorage.setItem('app_admin_pass', adminPassword);
+            document.getElementById('adminNewPass').value = '';
+            showToast('Contraseña de administrador actualizada.');
+        }
+
+        // Consulta de la tasa del Dólar BCV en Tiempo Real mediante API con fallback
+        async function fetchBcvRate() {
+            const syncIcon = document.getElementById('syncIcon');
+            if (syncIcon) syncIcon.classList.add('fa-spin');
+
+            try {
+                const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { cache: "no-store" });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.promedio) {
+                        document.getElementById('exchangeRate').value = parseFloat(data.promedio).toFixed(2);
+                        showToast(`Tasa BCV actualizada: Bs. ${data.promedio.toFixed(2)}`);
+                        updateTotals();
+                        return;
+                    }
+                }
+                throw new Error('Respuesta inválida del API');
+            } catch (error) {
+                console.warn('Fallo al obtener Tasa BCV automática. Se usará tasa de resguardo:', error);
+                showToast('Usando tasa de cambio referencial.', true);
+            } finally {
+                if (syncIcon) syncIcon.classList.remove('fa-spin');
+            }
+        }
+
+        // Mostrar notificación tipo Toast
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            if (isError) {
+                toastIcon.className = "fa-solid fa-triangle-exclamation text-amber-400";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            }
+
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3500);
+        }
+
+        // Mostrar/Ocultar campo de precio de delivery personalizado
+        function handleDeliveryZoneChange() {
+            const zoneSelect = document.getElementById('deliveryZone');
+            const customContainer = document.getElementById('customDeliveryContainer');
+
+            if (zoneSelect.value === 'custom') {
+                customContainer.classList.remove('hidden');
+            } else {
+                customContainer.classList.add('hidden');
+            }
+            updateTotals();
+        }
+
+        // Obtener el precio actual de Delivery seleccionado
+        function getDeliveryPrice() {
+            const zoneValue = document.getElementById('deliveryZone').value;
+            if (zoneValue === 'custom') {
+                const customVal = parseFloat(document.getElementById('customDeliveryPrice').value);
+                return isNaN(customVal) || customVal < 0 ? 0 : customVal;
+            }
+            return parseFloat(zoneValue) || 0;
+        }
+
+        // Renderizar catálogo de productos en pantalla
+        function renderCatalog() {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+
+            const filteredProducts = activeCategory === 'all' 
+                ? products 
+                : products.filter(p => p.category === activeCategory);
+
+            if (filteredProducts.length === 0) {
+                grid.innerHTML = '<p class="col-span-2 text-slate-500 italic text-center py-6">No hay productos disponibles en esta categoría.</p>';
+                return;
+            }
+
+            filteredProducts.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card bg-slate-800/80 rounded-xl border border-slate-700/80 p-3 flex items-center justify-between gap-3 shadow-sm';
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${product.image}" alt="${product.name}" 
+                             onerror="this.src='https://placehold.co/100x100/1e293b/ffffff?text=Producto'"
+                             class="w-16 h-16 rounded-lg object-cover border border-slate-700 shrink-0">
+                        <div>
+                            <h4 class="font-bold text-xs md:text-sm text-slate-100 leading-tight">${product.name}</h4>
+                            <p class="text-emerald-400 font-extrabold text-sm mt-1">$${product.price.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Botones Contadores + / - -->
+                    <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shrink-0">
+                        <button onclick="changeQty('${product.id}', -1)" class="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-colors">
+                            <i class="fa-solid fa-minus text-xs"></i>
+                        </button>
+                        <span id="qty-${product.id}" class="w-8 text-center text-xs font-bold text-emerald-400">${product.qty || 0}</span>
+                        <button onclick="changeQty('${product.id}', 1)" class="w-8 h-8 flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Filtrar productos por categoría
+        function filterCategory(cat) {
+            activeCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-700 shrink-0 transition-all";
+            });
+            const activeBtn = document.getElementById(`cat-${cat}`);
+            if (activeBtn) {
+                activeBtn.className = "cat-btn bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full border border-emerald-400 shrink-0 transition-all";
+            }
+            renderCatalog();
+        }
+
+        // Modificar cantidad del producto
+        function changeQty(productId, delta) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                product.qty = Math.max(0, (product.qty || 0) + delta);
+                const qtySpan = document.getElementById(`qty-${productId}`);
+                if (qtySpan) qtySpan.innerText = product.qty;
+                updateTotals();
+            }
+        }
+
+        // Actualizar Totales
+        function updateTotals() {
+            const rateInput = document.getElementById('exchangeRate');
+            let rate = parseFloat(rateInput.value);
+            if (isNaN(rate) || rate <= 0) rate = 1;
+
+            let subtotalUSD = 0;
+            let totalItemsCount = 0;
+            const selectedList = document.getElementById('selectedItemsList');
+            selectedList.innerHTML = '';
+
+            const selectedProducts = products.filter(p => p.qty > 0);
+
+            if (selectedProducts.length === 0) {
+                selectedList.innerHTML = '<p class="text-slate-500 italic text-center py-2">No has seleccionado productos aún.</p>';
+            } else {
+                selectedProducts.forEach(p => {
+                    const itemTotal = p.qty * p.price;
+                    subtotalUSD += itemTotal;
+                    totalItemsCount += p.qty;
+
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center text-slate-300 border-b border-slate-800/60 pb-1';
+                    row.innerHTML = `
+                        <span><strong class="text-emerald-400">${p.qty}x</strong> ${p.name}</span>
+                        <span class="font-semibold text-slate-200">$${itemTotal.toFixed(2)}</span>
+                    `;
+                    selectedList.appendChild(row);
+                });
+            }
+
+            const deliveryUSD = getDeliveryPrice();
+            const grandTotalUSD = subtotalUSD + deliveryUSD;
+            const grandTotalBS = grandTotalUSD * rate;
+
+            document.getElementById('itemCount').innerText = `${totalItemsCount} ítem${totalItemsCount !== 1 ? 's' : ''}`;
+            document.getElementById('subtotalUSD').innerText = `$${subtotalUSD.toFixed(2)}`;
+            document.getElementById('deliveryCostDisplay').innerText = `$${deliveryUSD.toFixed(2)}`;
+            document.getElementById('totalUSD').innerText = `$${grandTotalUSD.toFixed(2)}`;
+            document.getElementById('totalBS').innerText = `Bs. ${grandTotalBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Navegación Paso 1 -> Paso 2
+        function goToCatalog(e) {
+            e.preventDefault();
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Navegación Paso 2 -> Paso 1
+        function goToForm() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+        }
+
+        // Vaciar Carrito y Limpiar Formulario Completo
+        function clearCartAndForm(confirmUser = false) {
+            if (confirmUser && !confirm('¿Estás seguro de reiniciar la orden y vaciar tus datos?')) {
+                return;
+            }
+
+            products.forEach(p => p.qty = 0);
+            document.getElementById('clientForm').reset();
+            document.getElementById('deliveryZone').selectedIndex = 0;
+            handleDeliveryZoneChange();
+
+            renderCatalog();
+            updateTotals();
+            goToForm();
+
+            if (confirmUser) showToast('Se ha limpiado el pedido correctamente.');
+        }
+
+        // Generar formato de mensaje y enviar a WhatsApp + Limpieza Automática
+        function sendWhatsAppOrder() {
+            const selectedProducts = products.filter(p => p.qty > 0);
+
+            if (selectedProducts.length === 0) {
+                alert('Por favor selecciona al menos un producto de nuestro catálogo.');
+                return;
+            }
+
+            const clientName = document.getElementById('clientName').value.trim();
+            const clientId = document.getElementById('clientId').value.trim();
+            const clientPhone = document.getElementById('clientPhone').value.trim();
+            const clientAddress = document.getElementById('clientAddress').value.trim();
+            const zoneSelect = document.getElementById('deliveryZone');
+            const zoneText = zoneSelect.options[zoneSelect.selectedIndex].text;
+
+            const rate = parseFloat(document.getElementById('exchangeRate').value) || 1;
+            const deliveryUSD = getDeliveryPrice();
+            let subtotalUSD = 0;
+
+            let itemsFormatted = '';
+            selectedProducts.forEach(p => {
+                const itemTotal = p.qty * p.price;
+                subtotalUSD += itemTotal;
+                itemsFormatted += `• ${p.qty}x ${p.name} = *$${itemTotal.toFixed(2)}*\n`;
+            });
+
+            const grandTotalUSD = subtotalUSD + deliveryUSD;
+            const grandTotalBS = grandTotalUSD * rate;
+
+            const message = `🛍️ *¡NUEVO PEDIDO DE DELIVERY!* 🚀\n\n` +
+                `👤 *DATOS DEL CLIENTE:*\n` +
+                `• *Nombre:* ${clientName}\n` +
+                `• *Cédula:* ${clientId}\n` +
+                `• *Teléfono:* ${clientPhone}\n` +
+                `• *Dirección:* ${clientAddress}\n` +
+                `• *Modalidad:* ${zoneText}\n\n` +
+                `📋 *DETALLE DEL PEDIDO:*\n` +
+                `${itemsFormatted}\n` +
+                `💵 *Subtotal Productos:* $${subtotalUSD.toFixed(2)}\n` +
+                `🛵 *Costo Delivery:* $${deliveryUSD.toFixed(2)}\n` +
+                `📊 *Tasa BCV:* Bs. ${rate.toFixed(2)}\n\n` +
+                `💰 *TOTAL A PAGAR:*\n` +
+                `👉 *$${grandTotalUSD.toFixed(2)} USD*\n` +
+                `👉 *Bs. ${grandTotalBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n\n` +
+                `📍 *Solicitud:* Enviar por delivery. Favor confirmar recepción y tiempo estimado.`;
+
+            const whatsappUrl = `https://wa.me/${vendorPhone}?text=${encodeURIComponent(message)}`;
+
+            window.open(whatsappUrl, '_blank');
+
+            setTimeout(() => {
+                clearCartAndForm(false);
+                showToast('¡Pedido enviado! Formulario e historial limpiados.');
+            }, 800);
+        }
+
+        // Inicialización al cargar la aplicación
+        window.onload = function() {
+            loadStoredSettings();
+            renderCatalog();
+            updateTotals();
+            fetchBcvRate();
+        };
+    </script>
+</body>
+</html>
